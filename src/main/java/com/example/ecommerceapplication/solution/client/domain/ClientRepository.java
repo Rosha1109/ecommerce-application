@@ -7,4 +7,5 @@ import java.util.UUID;
 
 public interface ClientRepository extends CrudRepository<Client, UUID> {
     Client findByEmailAddress(EmailAddressType emailAddress);
+    boolean existsByEmailAddress(EmailAddressType emailAddress);
 }

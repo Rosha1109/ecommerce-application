@@ -2,20 +2,24 @@ package com.example.ecommerceapplication.solution.purchase.domain;
 
 import com.example.ecommerceapplication.solution.client.domain.Client;
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 import static jakarta.persistence.GenerationType.*;
 
+@Entity
+@Getter
 public class Purchase {
     @Id
     @GeneratedValue(strategy = AUTO)
     protected UUID id;
     @ManyToOne
+    @Setter
     protected Client client;
 
     @ElementCollection
-    private List<PurchasePart> purchaseParts = new ArrayList<>();
+    @Setter
+    private Map<UUID,Integer> purchaseHistory = new HashMap<>();
 }

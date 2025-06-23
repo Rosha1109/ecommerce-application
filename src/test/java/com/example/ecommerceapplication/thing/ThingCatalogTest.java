@@ -1,5 +1,6 @@
 package com.example.ecommerceapplication.thing;
 
+
 import com.example.ecommerceapplication.ClientTestHelper;
 import com.example.ecommerceapplication.ShopException;
 import com.example.ecommerceapplication.ThingAndStockTestHelper;
@@ -16,9 +17,8 @@ import java.util.UUID;
 
 import static com.example.ecommerceapplication.ClientTestHelper.CLIENT_EMAIL;
 import static com.example.ecommerceapplication.ThingAndStockTestHelper.DEPOT_ID;
-import static com.example.ecommerceapplication.ThingAndStockTestHelper.InvalidReason.NULL;
-import static com.example.ecommerceapplication.ThingAndStockTestHelper.InvalidReason.EMPTY;
 import static com.example.ecommerceapplication.ThingAndStockTestHelper.THING_DATA;
+import static com.example.ecommerceapplication.ThingAndStockTestHelper.InvalidReason.*;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
@@ -56,7 +56,7 @@ public class ThingCatalogTest {
 
 
     @Test
-    public void testAddThingToCatalog() {
+    public void  testAddThingToCatalog() {
         // given
         // when
         MoneyType sellPrice = thingCatalogUseCases.getSellPrice( (UUID) THING_DATA[4][0] );
@@ -170,5 +170,6 @@ public class ThingCatalogTest {
         assertThrows( ShopException.class,
                 () -> thingCatalogUseCases.getSellPrice( (UUID) THING_DATA[4][0] ) );
     }
+
 
 }

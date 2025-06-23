@@ -15,14 +15,14 @@ import java.util.Objects;
 @Getter
 @Setter(AccessLevel.PROTECTED)
 public class Money implements MoneyType {
-    Float amount;
-    String currency;
+    private Float amount;
+    private String currency;
 
     
     
     @Override
     public Float getAmount() {
-        return  amount;
+        return  this.amount;
     }
 
     @Override
