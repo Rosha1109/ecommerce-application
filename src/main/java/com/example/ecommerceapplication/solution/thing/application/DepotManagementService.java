@@ -9,8 +9,7 @@ import com.example.ecommerceapplication.usecases.DepotUseCases;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class DepotManagementService implements DepotUseCases {
@@ -41,59 +40,84 @@ public class DepotManagementService implements DepotUseCases {
 
     @Override
     public void removeFromStock(UUID thingId, int removedQuantity) {
-        if(thingId==null)throw new ShopException("Thing not found");
         Thing thing = thingRepository.findByThingId(thingId);
-        if (thingRepository.findByThingId(thingId)==null) throw new ShopException("Thing not found");
-        if(thing.getThingStock() == null && removedQuantity> 0)throw new ShopException("Thing has no stock anyways");
+        if(thing==null) {throw new ShopException("Thing not found");}
         if(removedQuantity < 0) {throw new ShopException("Invalid quantity");}
-        int reservedQuantity = 0;
-        for(ShoppingBasket basket: shoppingBasketRepository.findAll()) {
-            for(Map.Entry<UUID,Integer> entry:basket.getBasket().entrySet()) {
-                UUID thingIdInBasket = entry.getKey();
-                Integer quantity = entry.getValue();
-                if(thingIdInBasket.equals(thingId)) {
-                    reservedQuantity += quantity;
-                }
-            }
-        }
-        if(thing.getThingStock() != null && thing.getThingStock() + removedQuantity < removedQuantity){
+        if(removedQuantity > thing.getThingStock() + getReservedQuantity(thingId)) {
             throw new ShopException("Invalid quantity");
         }
-        if(thing.getThingStock() != null && reservedQuantity > thing.getThingStock()){
-
-        }
-        int newTotalQuantity;
-        if(thing.getThingStock() !=null) {
-             newTotalQuantity = thing.getThingStock() - removedQuantity;
+        if(removedQuantity <= thing.getThingStock()) {
+            thing.setThingStock(thing.getThingStock() - removedQuantity);
         }else{
-            newTotalQuantity = 0;
-        }
+            int rest = removedQuantity;
+            List<ShoppingBasket> rightBaskets = new ArrayList<>();
+            for(ShoppingBasket shoppingBasket : shoppingBasketRepository.findAll()) {
+                if(shoppingBasket.getBasket() != null && shoppingBasket.getBasket().containsKey(thingId)) {
+                    rightBaskets.add(shoppingBasket);
+                }
+            }
+        for(ShoppingBasket shoppingBasket : rightBaskets) {
+            if(rest == 0){
+                break;
+            }
+            Map<UUID,Integer> map = new HashMap<>(shoppingBasket.getBasket());
+            if(map == null)map = new HashMap<>();
+            int stockQuantity = map.get(thingId);
 
-        //TODO: check if removed quant ist greater than stock + reserved
-        //TODO: take something of the clients baskets if stock < reserved
-        if(newTotalQuantity <0){
-            throw new ShopException("cant remove so much");
+            if(stockQuantity <=rest){
+                rest -= stockQuantity;
+                map.remove(thingId);
+                shoppingBasket.setBasket(map);
+                shoppingBasketRepository.save(shoppingBasket);
+            }else{
+                map.put(thingId,stockQuantity-rest);
+                shoppingBasket.setBasket(map);
+                shoppingBasketRepository.save(shoppingBasket);
+                rest=0;
+            }
+
+
         }
-        thing.setThingStock(newTotalQuantity);
+        }
         thingRepository.save(thing);
     }
 
     @Override
     public void changeStockTo(UUID thingId, int newTotalQuantity) {
-        if(thingId==null)
-        {
+        if (thingId == null) {
             throw new ShopException("Thing not found");
         }
         Thing thing = thingRepository.findByThingId(thingId);
-        if(thing==null) {throw new ShopException("Thing not found");}
-        if(newTotalQuantity< 0) throw new ShopException("Invalid quantity");
-
-//        if(thing.getThingReserved()> thing.getThingStock()){
-//            //take some things off a basket
-//        }
-        thing.setThingStock(newTotalQuantity);
+        if (thing == null) {
+            throw new ShopException("Thing not found");
+        }
+        List<ShoppingBasket> baskets= new ArrayList<>();
+        for(ShoppingBasket shoppingBasket : shoppingBasketRepository.findAll()) {
+            if(shoppingBasket.getBasket() != null && shoppingBasket.getBasket().containsKey(thingId)) {
+                baskets.add(shoppingBasket);
+            }
+        }
+        if (newTotalQuantity < 0) throw new ShopException("Invalid quantity");
+        if( newTotalQuantity < getReservedQuantity(thingId) ) {
+            int removeInOtherBaskets = getReservedQuantity(thingId) - newTotalQuantity;
+                for(ShoppingBasket shoppingBasket : baskets) {
+                    int thingQuantity = shoppingBasket.getBasket().get(thingId);
+                    if(removeInOtherBaskets <= thingQuantity) {
+                        shoppingBasket.getBasket().put(thingId,thingQuantity - removeInOtherBaskets);
+                        shoppingBasketRepository.save(shoppingBasket);
+                        break;
+                    }else{
+                        removeInOtherBaskets -= thingQuantity;
+                        shoppingBasket.getBasket().put(thingId,0);
+                    }
+                }
+                thing.setThingStock(0);
+        }
+        thing.setThingStock(newTotalQuantity - getReservedQuantity(thingId));
         thingRepository.save(thing);
     }
+
+
 
     @Override
     public int getAvailableStock(UUID thingId) {
@@ -103,8 +127,25 @@ public class DepotManagementService implements DepotUseCases {
         if(thing.getThingStock()==null){
             return 0;
         }else{
-            return thing.getThingStock();
+            return thing.getThingStock() - getReservedQuantity(thingId);
         }
 
     }
+    public int getReservedQuantity(UUID thingId){
+        if(thingId==null)throw new ShopException("Thing not found");
+        Thing thing = thingRepository.findByThingId(thingId);
+        if(thing==null) throw new ShopException("Thing not found");
+        int sum = 0;
+        for(ShoppingBasket basket : shoppingBasketRepository.findAll()) {
+            if(basket.getBasket() == null){
+                continue;
+            }else{
+                if(basket.getBasket().get(thingId)!=null){
+                sum += basket.getBasket().get(thingId);
+                }
+            }
+        }
+        return sum;
+    }
+
 }

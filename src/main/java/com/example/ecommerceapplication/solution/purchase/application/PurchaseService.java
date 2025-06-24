@@ -9,6 +9,7 @@ import com.example.ecommerceapplication.usecases.domainprimitivetypes.EmailAddre
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 @Service
@@ -29,7 +30,8 @@ public class PurchaseService implements PurchaseUseCases {
         if( purchaseRepository.findByClient(client)==null){
             return Map.of();
         }else{
-            return purchaseRepository.findByClient(client).getPurchaseHistory();
+            Map<UUID,Integer> purchaseHistory= new HashMap<>(purchaseRepository.findByClient(client).getPurchaseHistory());
+            return purchaseHistory;
         }
     }
 

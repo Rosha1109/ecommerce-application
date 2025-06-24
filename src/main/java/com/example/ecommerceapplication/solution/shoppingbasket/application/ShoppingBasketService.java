@@ -16,6 +16,7 @@ import com.example.ecommerceapplication.usecases.domainprimitivetypes.MoneyType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -31,46 +32,53 @@ public class ShoppingBasketService implements ShoppingBasketUseCases {
     private PurchaseRepository purchaseRepository;
     @Override
     public void addThingToShoppingBasket(EmailAddressType clientEmailAddress, UUID thingId, int quantity) {
-        if(!clientRepository.existsByEmailAddress(clientEmailAddress))throw new ShopException("Client not found");
-        if(!thingRepository.existsByThingId(thingId))throw new ShopException("Thing not found");
-        if( quantity <= 0 )throw new ShopException("Quantity cannot be less than zero");
-        Thing thing = thingRepository.findByThingId(thingId);
-        if(quantity > thing.getThingStock())throw new ShopException("Quantity cannot be greater than thingStock");
-        Client client = clientRepository.findByEmailAddress(clientEmailAddress);
-        int stockPlusReserved = thing.getThingStock();
-        if(client !=null && shoppingBasketRepository.findByClient(client).getBasket() !=null ){
-            stockPlusReserved += shoppingBasketRepository.findByClient(client).getBasket().get(thingId);
-        }
-        if(quantity > stockPlusReserved)throw new ShopException("Quantity caanot be greater than thingStock + reserved things");
-        ShoppingBasket shoppingBasket = shoppingBasketRepository.findByClient(client);
-        if(shoppingBasket == null){
-            shoppingBasket = new ShoppingBasket();
-            shoppingBasket.setClient(client);
-        }
-        int newQuantity;
-        if(shoppingBasket.getBasket().get(thingId)==null){
-            newQuantity=quantity;
-        }else {
-             newQuantity = quantity + shoppingBasket.getBasket().get(thingId);
-        }
-        shoppingBasket.getBasket().put(thingId, newQuantity);
-        shoppingBasketRepository.save(shoppingBasket);
+      Client client = clientRepository.findByEmailAddress(clientEmailAddress);
+      if(client ==null)throw new ShopException("Client not found");
+      if(quantity < 0) throw new ShopException("quantity cannot be negative");
+      Map<UUID,Integer> newBasket = new HashMap<>();
+      Thing thing = thingRepository.findByThingId(thingId);
+      if(thing == null)throw new ShopException("Thing not found");
+      if(thing.getThingStock() < quantity)throw new ShopException("Cannot add so much in the basket");
+      ShoppingBasket basket = shoppingBasketRepository.findByClient(client);
+      if(basket == null){
+          basket = new ShoppingBasket();
+          basket.setClient(client);
+          basket.setBasket(newBasket);
+      }else{
+          newBasket = basket.getBasket();
+      }
+
+      if(basket.getBasket().containsKey(thingId)){
+          Integer basketQuantity = basket.getBasket().get(thingId);
+          basket.getBasket().put(thingId,quantity + basketQuantity);
+      }else{
+          newBasket.put(thingId,quantity);
+          basket.setBasket(newBasket);
+      }
+      shoppingBasketRepository.save(basket);
+      clientRepository.save(client);
+      thing.setThingStock(thing.getThingStock() - quantity);
+      thingRepository.save(thing);
+
     }
 
     @Override
     public void removeThingFromShoppingBasket(EmailAddressType clientEmailAddress, UUID thingId, int quantity) {
-        if(clientEmailAddress== null||!clientRepository.existsByEmailAddress(clientEmailAddress))throw new ShopException("Client not found");
-        if(quantity <= 0 )throw new ShopException("Quantity cannot be less than zero");
-        Thing thing = thingRepository.findByThingId(thingId);
-        if(thing.getThingStock() < quantity)throw new ShopException("Quantity cannot be larger than thingStock");
+        if(clientEmailAddress == null) throw new ShopException("");
         Client client = clientRepository.findByEmailAddress(clientEmailAddress);
-        ShoppingBasket shoppingBasket = shoppingBasketRepository.findByClient(client);
-        int currentQuantity = shoppingBasket.getBasket().get(thingId);
-        if(currentQuantity == quantity){shoppingBasket.getBasket().remove(thingId);}
-        else{
-            shoppingBasket.getBasket().put(thingId, currentQuantity - quantity);
+        if(client==null)throw new ShopException("Client not found");
+        if(quantity < 0)throw new ShopException("Cannot be negative");
+        ShoppingBasket basket = shoppingBasketRepository.findByClient(client);
+        if(basket==null || basket.getBasket()==null)throw new ShopException("Basket not found");
+        if(!basket.getBasket().containsKey(thingId) || basket.getBasket().get(thingId) < quantity){
+            throw new ShopException("Not removable");
         }
-        shoppingBasketRepository.save(shoppingBasket);
+        basket.getBasket().compute(thingId, (k,preQuantity) ->preQuantity - quantity);
+        shoppingBasketRepository.save(basket);
+        Thing thing = thingRepository.findByThingId(thingId);
+        thing.setThingStock(thing.getThingStock() - quantity);
+        thingRepository.save(thing);
+        clientRepository.save(client);
 
     }
 
@@ -84,15 +92,20 @@ public class ShoppingBasketService implements ShoppingBasketUseCases {
     @Override
     public MoneyType getShoppingBasketAsMoneyValue(EmailAddressType clientEmailAddress) {
         Map<UUID,Integer> basket = getShoppingBasketAsMap(clientEmailAddress);
-        Money sum = new Money();
+        float amount= 0;
+        String currency="";
+
         for(Map.Entry<UUID,Integer> entry :basket.entrySet())
         {
             UUID thingId = entry.getKey();
             Integer quantity = entry.getValue();
             Thing thing = thingRepository.findByThingId(thingId);
-            sum.add(thing.getSellPrice());
+            amount += quantity * thing.getSellPrice().getAmount();
+            currency = thing.getSellPrice().getCurrency();
+
         }
-        return sum;
+        MoneyType sum = Money.of(amount,currency);
+        return  sum;
     }
 
     @Override
@@ -109,9 +122,21 @@ public class ShoppingBasketService implements ShoppingBasketUseCases {
 
     @Override
     public boolean isEmpty(EmailAddressType clientEmailAddress) {
-        if(clientEmailAddress==null ||!clientRepository.existsByEmailAddress(clientEmailAddress))throw new ShopException("Client not found");
+        if(clientEmailAddress==null )throw new ShopException("Client email empty");
         Client client = clientRepository.findByEmailAddress(clientEmailAddress);
-        return shoppingBasketRepository.findByClient(client).getBasket().isEmpty();
+        if(client == null)throw new ShopException("Client not found");
+        ShoppingBasket basket = shoppingBasketRepository.findByClient(client);
+        if(basket == null) {
+            return false;
+        }
+        else{
+            if(basket.getBasket()==null){
+                return false;
+            }else{
+                return basket.getBasket().isEmpty();
+            }
+        }
+
     }
 
     @Override
@@ -121,19 +146,22 @@ public class ShoppingBasketService implements ShoppingBasketUseCases {
         Client client = clientRepository.findByEmailAddress(clientEmailAddress);
         if(isEmpty(clientEmailAddress))throw new ShopException("Client not found");
         ShoppingBasket clientsBasket = shoppingBasketRepository.findByClient(client);
+        if(clientsBasket==null)throw new ShopException("No basket found");
         Purchase purchase = purchaseRepository.findByClient(client);
         if(purchase==null){
             purchase = new Purchase();
             purchase.setClient(client);
         }
+        if(nothingToCheckout(clientsBasket.getBasket()))throw new ShopException("Nothing to checkout");
         for(Map.Entry<UUID,Integer> entry : clientsBasket.getBasket().entrySet()){
             UUID thingId = entry.getKey();
             Integer quantity = entry.getValue();
-            //purchase the baskets content
-            purchase.getPurchaseHistory().put(thingId, quantity);
-            Thing thing = thingRepository.findByThingId(thingId);
-            thing.setThingStock(thing.getThingStock() - quantity);
-            thingRepository.save(thing);
+            if(!purchase.getPurchaseHistory().containsKey(thingId)) {
+                purchase.getPurchaseHistory().put(thingId, quantity);
+            }else{
+                purchase.getPurchaseHistory().put(thingId, purchase.getPurchaseHistory().get(thingId) + quantity);
+            }
+
         }
         clientsBasket.getBasket().clear();
         shoppingBasketRepository.save(clientsBasket);
@@ -144,5 +172,16 @@ public class ShoppingBasketService implements ShoppingBasketUseCases {
     @Override
     public void emptyAllShoppingBaskets() {
         shoppingBasketRepository.deleteAll();
+    }
+    private boolean nothingToCheckout(Map<UUID,Integer> basket) {
+        boolean nothingToCheckout = false;
+        for(Map.Entry<UUID,Integer> entry : basket.entrySet()){
+            if(entry.getValue() == 0){
+                nothingToCheckout = true;
+            }else{
+                nothingToCheckout = false;
+            }
+        }
+        return nothingToCheckout;
     }
 }

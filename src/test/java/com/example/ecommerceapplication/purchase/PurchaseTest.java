@@ -83,8 +83,8 @@ public class PurchaseTest {
         assertEquals( 3, purchaseHistory1.get( thingId1 ) );
         assertEquals( 2, purchaseHistory1.get( thingId2 ) );
         assertEquals( 9, purchaseHistory2.get( thingId1 ) );
-        assertEquals( 4, purchaseHistory2.get( thingId2 ) );
         assertEquals( 10, purchaseHistory3.get( thingId1 ) );
+        assertEquals( 4, purchaseHistory2.get( thingId2 ) );
         assertEquals( 10, purchaseHistory3.get( thingId2 ) );
     }
 
