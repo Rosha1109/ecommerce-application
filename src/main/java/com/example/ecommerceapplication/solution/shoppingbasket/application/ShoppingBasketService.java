@@ -8,8 +8,7 @@ import com.example.ecommerceapplication.solution.purchase.domain.Purchase;
 import com.example.ecommerceapplication.solution.purchase.domain.PurchaseRepository;
 import com.example.ecommerceapplication.solution.shoppingbasket.domain.ShoppingBasket;
 import com.example.ecommerceapplication.solution.shoppingbasket.domain.ShoppingBasketRepository;
-import com.example.ecommerceapplication.solution.thing.domain.Thing;
-import com.example.ecommerceapplication.solution.thing.domain.ThingRepository;
+
 import com.example.ecommerceapplication.usecases.ShoppingBasketUseCases;
 import com.example.ecommerceapplication.usecases.domainprimitivetypes.EmailAddressType;
 import com.example.ecommerceapplication.usecases.domainprimitivetypes.MoneyType;
@@ -24,21 +23,21 @@ import java.util.UUID;
 public class ShoppingBasketService implements ShoppingBasketUseCases {
     @Autowired
     private ShoppingBasketRepository shoppingBasketRepository;
-    @Autowired
-    private ThingRepository thingRepository;
+
     @Autowired
     private ClientRepository clientRepository;
     @Autowired
     private PurchaseRepository purchaseRepository;
+    @Autowired
+    private RightThingServiceInterface rightThingRepository;
     @Override
     public void addThingToShoppingBasket(EmailAddressType clientEmailAddress, UUID thingId, int quantity) {
       Client client = clientRepository.findByEmailAddress(clientEmailAddress);
       if(client ==null)throw new ShopException("Client not found");
       if(quantity < 0) throw new ShopException("quantity cannot be negative");
       Map<UUID,Integer> newBasket = new HashMap<>();
-      Thing thing = thingRepository.findByThingId(thingId);
-      if(thing == null)throw new ShopException("Thing not found");
-      if(thing.getThingStock() < quantity)throw new ShopException("Cannot add so much in the basket");
+
+      if(rightThingRepository.getThingStock(thingId) < quantity)throw new ShopException("Cannot add so much in the basket");
       ShoppingBasket basket = shoppingBasketRepository.findByClient(client);
       if(basket == null){
           basket = new ShoppingBasket();
@@ -57,8 +56,7 @@ public class ShoppingBasketService implements ShoppingBasketUseCases {
       }
       shoppingBasketRepository.save(basket);
       clientRepository.save(client);
-      thing.setThingStock(thing.getThingStock() - quantity);
-      thingRepository.save(thing);
+      rightThingRepository.setThingStock(thingId, rightThingRepository.getThingStock(thingId)-quantity);
 
     }
 
@@ -75,9 +73,9 @@ public class ShoppingBasketService implements ShoppingBasketUseCases {
         }
         basket.getBasket().compute(thingId, (k,preQuantity) ->preQuantity - quantity);
         shoppingBasketRepository.save(basket);
-        Thing thing = thingRepository.findByThingId(thingId);
-        thing.setThingStock(thing.getThingStock() - quantity);
-        thingRepository.save(thing);
+
+        rightThingRepository.setThingStock(thingId, rightThingRepository.getThingStock(thingId)+quantity);
+
         clientRepository.save(client);
 
     }
@@ -99,9 +97,9 @@ public class ShoppingBasketService implements ShoppingBasketUseCases {
         {
             UUID thingId = entry.getKey();
             Integer quantity = entry.getValue();
-            Thing thing = thingRepository.findByThingId(thingId);
-            amount += quantity * thing.getSellPrice().getAmount();
-            currency = thing.getSellPrice().getCurrency();
+
+            amount += quantity * rightThingRepository.getSellPrice(thingId).getAmount();
+            currency = rightThingRepository.getSellPrice(thingId).getCurrency();
 
         }
         MoneyType sum = Money.of(amount,currency);
@@ -110,7 +108,8 @@ public class ShoppingBasketService implements ShoppingBasketUseCases {
 
     @Override
     public int getReservedStockInShoppingBaskets(UUID thingId) {
-        if(thingId == null || !thingRepository.existsByThingId(thingId))throw new ShopException("Thing not found");
+        if(thingId == null )throw new ShopException("Thing not found");
+        rightThingRepository.getThingStock(thingId); // <- if no exception ist thrown, the thing exists
         int reservedThingQuantity = 0;
         for(ShoppingBasket basket : shoppingBasketRepository.findAll()){
             if(basket.getBasket().get(thingId) != null){
