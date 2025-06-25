@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<diagram program="umlet" version="15.0.0">
+  <zoom_level>6</zoom_level>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>444</x>
+      <y>222</y>
+      <w>306</w>
+      <h>276</h>
+    </coordinates>
+    <panel_attributes>Thing
+--
+
+bg=yellow</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLPackage</id>
+    <coordinates>
+      <x>72</x>
+      <y>204</y>
+      <w>288</w>
+      <h>282</h>
+    </coordinates>
+    <panel_attributes>ShoppingBasket
+--
+bg=GREEN
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>276</x>
+      <y>156</y>
+      <w>282</w>
+      <h>78</h>
+    </coordinates>
+    <panel_attributes>lt=.&gt;
+
+Diese Abhängigkeit ist in Ordnung
+</panel_attributes>
+    <additional_attributes>450.0;110.0;450.0;20.0;10.0;20.0;10.0;100.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>84</x>
+      <y>240</y>
+      <w>102</w>
+      <h>36</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;Service&gt;&gt;
+**ShoppingBasketService**
+bg=WHITE
+
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>222</x>
+      <y>342</y>
+      <w>114</w>
+      <h>18</h>
+    </coordinates>
+    <panel_attributes>**ShoppingBasketRepository**</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>462</x>
+      <y>378</y>
+      <w>102</w>
+      <h>18</h>
+    </coordinates>
+    <panel_attributes>**ThingRepository**</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>468</x>
+      <y>318</y>
+      <w>108</w>
+      <h>36</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;Service&gt;&gt;
+**DepotManagementService**
+</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>330</x>
+      <y>336</y>
+      <w>150</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;-
+ uses
+</panel_attributes>
+    <additional_attributes>10.0;20.0;230.0;20.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>240</x>
+      <y>246</y>
+      <w>108</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>&lt;&lt;Interface&gt;&gt;
+RightThingServiceInterface</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>180</x>
+      <y>246</y>
+      <w>72</w>
+      <h>30</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;-
+ uses
+</panel_attributes>
+    <additional_attributes>100.0;20.0;10.0;20.0</additional_attributes>
+  </element>
+  <element>
+    <id>UMLClass</id>
+    <coordinates>
+      <x>462</x>
+      <y>252</y>
+      <w>102</w>
+      <h>24</h>
+    </coordinates>
+    <panel_attributes>RightThingService</panel_attributes>
+    <additional_attributes/>
+  </element>
+  <element>
+    <id>Relation</id>
+    <coordinates>
+      <x>342</x>
+      <y>252</y>
+      <w>132</w>
+      <h>24</h>
+    </coordinates>
+    <panel_attributes>lt=&lt;&lt;.
+implements</panel_attributes>
+    <additional_attributes>10.0;20.0;200.0;20.0</additional_attributes>
+  </element>
+</diagram>
